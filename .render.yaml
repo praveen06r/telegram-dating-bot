@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: telegram-dating-bot
+    name: your-telegram-bot
     env: python
     plan: free
-    buildCommand: ""
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
     envVars:
       - key: BOT_TOKEN
-        sync: false
-      - key: OWNER_ID
-        sync: false
+        fromSecret: BOT_TOKEN
+      - key: DATABASE_URL
+        fromSecret: DATABASE_URL
