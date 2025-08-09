@@ -5,9 +5,13 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from database import User, get_db, SessionLocal
 from sqlalchemy.orm import Session
 
-# 🔹 Hardcoded bot token and multiple owners (easy to edit later)
-BOT_TOKEN = "7532789099:AAGSSCTBMUmOPBm-9eY-_3C_nUycPq-wAQI"
-OWNER_IDS = [5518634633, 108099033]  # Add more IDs here if needed
+# 🔹 Bot token is securely stored in Render environment variables
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # <-- Set in Render Dashboard (Environment tab)
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN is missing. Please set it in Render environment variables.")
+
+# 🔹 Multiple owners can be hardcoded here (add more IDs as needed)
+OWNER_IDS = [5518634633, 108099033]
 
 app = FastAPI()
 telegram_app = Application.builder().token(BOT_TOKEN).build()
@@ -86,4 +90,3 @@ async def webhook(request: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"status": "ok"}
-    
