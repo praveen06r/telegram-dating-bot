@@ -1,4 +1,6 @@
 fastapi
+uvicorn[standard]
 python-telegram-bot==20.3
-uvicorn
-sqlalchemy
+SQLAlchemy
+databases
+asyncpg
