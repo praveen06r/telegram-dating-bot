@@ -5,13 +5,12 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from database import User, get_db, SessionLocal
 from sqlalchemy.orm import Session
 
-# 🔹 Bot token is securely stored in Render environment variables
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # <-- Set in Render Dashboard (Environment tab)
+# 🔹 Get token & owner IDs from environment variables
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN is missing. Please set it in Render environment variables.")
 
-# 🔹 Multiple owners can be hardcoded here (add more IDs as needed)
-OWNER_IDS = [5518634633, 108099033]
+OWNER_IDS = list(map(int, os.getenv("OWNER_IDS", "").split(",")))  # e.g. "5518634633,108099033"
 
 app = FastAPI()
 telegram_app = Application.builder().token(BOT_TOKEN).build()
@@ -47,7 +46,6 @@ async def find_partner(update: Update, context):
     db = SessionLocal()
     user = get_or_create_user(update.effective_user.id, db)
 
-    # Check subscription limit
     if user.chats_seen >= 5 and not user.subscribed:
         button = InlineKeyboardButton("Subscribe for $2/month", callback_data="subscribe")
         await update.message.reply_text(
@@ -56,14 +54,12 @@ async def find_partner(update: Update, context):
         )
         return
 
-    # Find partner
     partner = db.query(User).filter(User.gender != user.gender, User.telegram_id != user.telegram_id).first()
     if partner:
         user.chats_seen += 1
         db.commit()
         await update.message.reply_text(f"Matched with gender: {partner.gender}")
 
-        # Owner(s) can see Telegram ID
         if update.effective_user.id in OWNER_IDS:
             await update.message.reply_text(f"(Owner View) Partner ID: {partner.telegram_id}")
     else:
@@ -83,10 +79,11 @@ telegram_app.add_handler(MessageHandler(filters.Regex("^(M|F|m|f)$"), set_gender
 telegram_app.add_handler(CommandHandler("find", find_partner))
 telegram_app.add_handler(CallbackQueryHandler(handle_subscribe, pattern="subscribe"))
 
-# ----------------- Webhook -----------------
+# ----------------- Webhook endpoint -----------------
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
     update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.initialize()
     await telegram_app.process_update(update)
     return {"status": "ok"}
